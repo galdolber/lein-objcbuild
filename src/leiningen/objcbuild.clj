@@ -43,7 +43,12 @@
   (str (st/replace (subs (subs f 0 (dec (count f))) (inc (count objc))) #"/" "_") "o"))
 
 (defn fsh [& o]
-  (apply sh (filter identity (flatten o))))
+  (let [cmd (filter identity (flatten o))
+        r (apply sh cmd)]
+    (when-not (zero? (:exit r))
+      (println )
+      (println cmd)
+      (println r))))
 
 (defn build [project sdk archs]
   (let [target (:target-path project)
@@ -93,7 +98,7 @@
             (when-not (.exists headers)
               (.mkdirs headers))
             (with-sh-dir objcdir
-              (sh "rsync" "-avm" "--delete" "--include='*.h'" "-f" "'hide,! */'" "." (.getCanonicalPath headers)))))
+              (fsh "rsync" "-avm" "--delete" "--include" "*.h" "--exclude" "*.m" "." (.getCanonicalPath headers)))))
 
         (let [libs (for [[sdk archs] (group-by arch->sdk (:archs conf))]
                      (build project sdk archs))

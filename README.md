@@ -9,6 +9,7 @@ Download the last j2objc distribution from: https://code.google.com/p/j2objc/
 Download the last clojure-objc dist from: https://github.com/galdolber/clojure-objc
 
 Add to your project.clj:
+    `:aot :all`
     `:objcbuild {:j2objc "path/to/j2objc" :clojure-objc "path/to/clojure-objc"}`
 
 Add `[galdolber/clojure-objc "1.5.1"]` to your `:dependencies` of your project.clj.

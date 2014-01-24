@@ -33,8 +33,6 @@ Every clojure-objc project generates an include folder with all headers and a st
     * lein compile; lein objcbuild
     * Run XCode project
     
-Tip: add this as a build script phase
-    
 ## Future work
 
     * Incremental compiles

@@ -43,7 +43,7 @@
   (str (st/replace (subs (subs f 0 (dec (count f))) (inc (count objc))) #"/" "_") "o"))
 
 (defn fsh [& o]
-  (apply sh (flatten o)))
+  (apply sh (filter identity (flatten o))))
 
 (defn build [project sdk archs]
   (let [target (:target-path project)
@@ -84,10 +84,7 @@
           (when (.exists objcdir)
             (delete-file-recursively objcdir))
           (.mkdirs objcdir)
-          (sh "zip" "-r" (str target "/objc.jar") (str target "/gen")
-              (if-let [j (:java-source-paths project)]
-                (reduce str (interpose " " j))
-                ""))
+          (fsh "zip" "-r" (str target "/objc.jar") (str target "/gen") (:java-source-paths project))
 
           (sh "j2objc" "-d" (str target "/" (:objc-path conf))
               "-classpath" (reduce str (interpose ":" (classpath/get-classpath project))) (str target "/objc.jar"))

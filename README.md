@@ -26,6 +26,21 @@ Every clojure-objc project generates an include folder with all headers and a st
     Build Settings-> Other Linker Flags-> Add "-ObjC -lz -ljre_emul -lclojure-objc -l{project name}"
     Build Settings-> Header Search Path-> Add "path/to/j2objc/include" "path/to/clojure-objc/include" "path/to/your/project/target/include"
     Build Settings-> Library Search Path->  Add "path/to/j2objc/lib" "path/to/clojure-objc/" "path/to/your/project/target/"
+    
+## Calling clojure function
+
+    #import "clojure/lang/RT.h"
+    #import "clojure/lang/Var.h"
+    #import "clojure/lang/ObjC.h"
+    @implementation AppDelegate
+    - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
+    {
+        [ClojureLangObjC setObjC]; // required!
+        [ClojureLangRT load__WithNSString:@"clojure/core"]; // load clojure core
+        
+        [ClojureLangRT load__WithNSString:@"clojure_objc_sample/core"]; // loads your entry point (IMPORTANT: replace - with _ for loading)
+        [[ClojureLangRT varWithNSString:@"clojure-objc-sample.core" withNSString:@"say-hi"] invokeWithId:@"Xcode"]; // call function
+        ...
 
 ## Development cycle
 

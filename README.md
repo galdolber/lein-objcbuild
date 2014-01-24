@@ -32,6 +32,10 @@ Every clojure-objc project generates an include folder with all headers and a st
     * Make changes
     * lein compile; lein objcbuild
     * Run XCode project
+    
+## Sample project
+
+https://github.com/galdolber/clojure-objc-sample
 
 ## Future work
 

@@ -4,8 +4,7 @@ A Leiningen plugin to make clojure-objc development easy.
 
 ## Usage
 
-Download the last j2objc distribution from: https://code.google.com/p/j2objc/
-Add j2objc to your PATH
+Download the last j2objc distribution from: https://code.google.com/p/j2objc/ and add it to your PATH
 
 Download the last clojure-objc dist from: https://github.com/galdolber/clojure-objc
 

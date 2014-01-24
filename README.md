@@ -27,7 +27,7 @@ Every clojure-objc project generates an include folder with all headers and a st
     Build Settings-> Header Search Path-> Add "path/to/j2objc/include" "path/to/clojure-objc/include" "path/to/your/project/target/include"
     Build Settings-> Library Search Path->  Add "path/to/j2objc/lib" "path/to/clojure-objc/" "path/to/your/project/target/"
     
-## Calling clojure function
+## Calling clojure functions
 
     #import "clojure/lang/RT.h"
     #import "clojure/lang/Var.h"

@@ -4,10 +4,34 @@ A Leiningen plugin to make clojure-objc development easy.
 
 ## Usage
 
+Download the last j2objc distribution from: https://code.google.com/p/j2objc/
+
+Download the last clojure-objc dist from: https://github.com/galdolber/clojure-objc
+
+Add to your project.clj:
+    `:objcbuild {:j2objc "path/to/j2objc" :clojure-objc "path/to/clojure-objc"}`
+
+Add `[galdolber/clojure-objc "1.5.1"]` to your `:dependencies` of your project.clj.
+
 Put `[objcbuild "0.1.0"]` into the `:plugins` vector of your project.clj.
 
     $ lein compile # clojure-objc generates all the required sources
-    $ lein objcbuild # translates the sources into objc, copies all headers and builds a static library
+    $ lein objcbuild # translates the sources into objc, copies all headers and builds a fat static library
+
+## Build options
+
+`{:j2objc "/path/to/j2objc/dist"
+  :clojure-objc "path/to/clojure-objc/dist"
+  :objc-path "objc"
+  :headers-path "include"
+  :iphoneos-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk"
+  :iphonesimulator-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhone Simulator7.0.sdk"
+  :frameworks [:UIKit :Foundation]
+  :includes []
+  :iphone-version-min 5.0
+  :archs [:armv7 :armv7s :arm64 :i386 :x86_64]
+  :clang-params "-fmessage-length=0 -fmacro-backtrace-limit=0 -std=gnu99 -fpascal-strings -fstrict-aliasing"
+  :clang-extra "-O0 -DDEBUG=1"}`
 
 ## License
 

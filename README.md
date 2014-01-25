@@ -1,10 +1,11 @@
-# objcbuild
+# lein-objcbuild
 
 A Leiningen plugin to make clojure-objc development easy.
 
 ## Usage
 
 Download j2objc and the last clojure-objc dist from: https://github.com/galdolber/clojure-objc
+
 Add j2objc to your PATH
 
 Add to your project.clj:

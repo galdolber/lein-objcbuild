@@ -14,7 +14,7 @@ Add to your project.clj:
 
 Add `[galdolber/clojure-objc "1.5.1"]` to your `:dependencies` of your project.clj.
 
-Put `[lein-objcbuild "0.1.1"]` into the `:plugins` vector of your project.clj.
+Put `[lein-objcbuild "0.1.2"]` into the `:plugins` vector of your project.clj.
 
     $ lein compile # clojure-objc generates all the required sources
     $ lein objcbuild # translates the sources into objc, copies all headers and builds a fat static library

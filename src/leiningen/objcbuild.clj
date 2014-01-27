@@ -94,6 +94,8 @@
           (when (.exists objcdir)
             (delete-file-recursively objcdir))
           (.mkdirs objcdir)
+          (doseq [p (:objc-source-paths project)]
+            (fsh "cp" "-R" (str p "/.") (.getCanonicalPath objcdir)))
           (fsh "zip" "-r" (str target "/objc.jar") (str target "/gen") (:java-source-paths project))
           
           (fsh (str (:j2objc conf) "/j2objc") "-d" (str target "/" (:objc-path conf))

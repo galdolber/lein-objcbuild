@@ -53,7 +53,8 @@
 (defn build [project sdk archs]
   (let [target (:target-path project)
         conf (:objcbuild project)
-        objcdir (str target "/" (:objc-path conf))]
+        objcdir (str target "/" (:objc-path conf))
+        print-agent (agent nil)]
     (println "Compiling" sdk "for archs:" archs "...")
     (let [ds (str target "/" (name sdk))
           d (file ds)]
@@ -61,15 +62,19 @@
         (delete-file-recursively d))
       (.mkdirs d)
       (with-sh-dir d
-        (doseq [m (find-files objcdir "m")]
-          (println "clang" (.getName m) "to" (str ds "/" (makeoname objcdir (.getCanonicalPath m))))
-          (fsh "clang" "-x" "objective-c" (map #(vector "-arch" (name %)) archs)
-               (st/split (:clang-params conf) #" ") (st/split (:clang-extra conf) #" ")
-               (str "-miphoneos-version-min=" (:iphone-version-min conf))
-               "-isysroot" (conf sdk) (str "-I" (:clojure-objc conf) "/include")
-               (str "-I" (:j2objc conf) "/include") (str "-I" objcdir)
-               (map  #(str "-I" %) (:includes conf)) "-c" (.getCanonicalPath m) "-o"
-               (str ds "/" (makeoname objcdir (.getCanonicalPath m))))))
+        (doall
+         (pmap (fn [m]
+                 (send print-agent
+                       (fn [_]
+                         (println "clang" (.getName m))))
+                 (fsh "clang" "-x" "objective-c" (map #(vector "-arch" (name %)) archs)
+                      (st/split (:clang-params conf) #" ") (st/split (:clang-extra conf) #" ")
+                      (str "-miphoneos-version-min=" (:iphone-version-min conf))
+                      "-isysroot" (conf sdk) (str "-I" (:clojure-objc conf) "/include")
+                      (str "-I" (:j2objc conf) "/include") (str "-I" objcdir)
+                      (map  #(str "-I" %) (:includes conf)) "-c" (.getCanonicalPath m) "-o"
+                      (str ds "/" (makeoname objcdir (.getCanonicalPath m)))))
+               (find-files objcdir "m"))))
       (let [filelist (str ds "/" (name sdk) ".LinkFileList")
             libpath (str ds "/" (:libname conf))]
         (spit filelist (reduce str (interpose "\n" (find-files d "o"))))
@@ -90,9 +95,9 @@
             (delete-file-recursively objcdir))
           (.mkdirs objcdir)
           (fsh "zip" "-r" (str target "/objc.jar") (str target "/gen") (:java-source-paths project))
-
-          (sh "j2objc" "-d" (str target "/" (:objc-path conf))
-              "-classpath" (reduce str (interpose ":" (classpath/get-classpath project))) (str target "/objc.jar"))
+          
+          (fsh (str (:j2objc conf) "/j2objc") "-d" (str target "/" (:objc-path conf))
+               "-classpath" (reduce str (interpose ":" (classpath/get-classpath project))) (str target "/objc.jar"))
 
           (let [headers (file (str target "/" (:headers-path conf)))]
             (when-not (.exists headers)

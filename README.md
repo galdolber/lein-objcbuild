@@ -58,18 +58,20 @@ https://github.com/galdolber/clojure-objc-sample
 
 ## Build options
 
-    {:j2objc "/path/to/j2objc/dist"
-     :clojure-objc "path/to/clojure-objc/dist"
-     :objc-path "objc"
-     :headers-path "include"
-     :iphoneos-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk"
-     :iphonesimulator-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhone Simulator7.0.sdk"
-     :frameworks [:UIKit :Foundation]
-     :includes []
-     :iphone-version-min 5.0
-     :archs [:armv7 :armv7s :arm64 :i386 :x86_64]
-     :clang-params "-fmessage-length=0 -fmacro-backtrace-limit=0 -std=gnu99 -fpascal-strings -fstrict-aliasing"
-     :clang-extra "-O0 -DDEBUG=1"}`
+    (defproject ...
+        :objc-source-paths ["path/to/objc/sources"]
+        {:j2objc "/path/to/j2objc/dist"
+        :clojure-objc "path/to/clojure-objc/dist"
+        :objc-path "objc"
+        :headers-path "include"
+        :iphoneos-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk"
+        :iphonesimulator-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhone Simulator7.0.sdk"
+        :frameworks [:UIKit :Foundation]
+        :includes []
+        :iphone-version-min 5.0
+        :archs [:armv7 :armv7s :arm64 :i386 :x86_64]
+        :clang-params "-fmessage-length=0 -fmacro-backtrace-limit=0 -std=gnu99 -fpascal-strings -fstrict-aliasing"
+        :clang-extra "-O0 -DDEBUG=1"}`
 
 ## License
 

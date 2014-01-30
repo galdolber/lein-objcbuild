@@ -2,6 +2,10 @@
 
 A Leiningen plugin to make clojure-objc development easy.
 
+## Sample project
+
+https://github.com/galdolber/clojure-objc-sample
+
 ## Usage
 
 Download j2objc and the last clojure-objc dist from: https://github.com/galdolber/clojure-objc
@@ -47,10 +51,6 @@ Every clojure-objc project generates an include folder with all headers and a st
     * Make changes
     * lein compile; lein objcbuild
     * Run XCode project
-    
-## Sample project
-
-https://github.com/galdolber/clojure-objc-sample
 
 ## Future work
 

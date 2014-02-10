@@ -25,7 +25,7 @@ Put `[lein-objcbuild "0.1.3"]` into the `:plugins` vector of your project.clj.
 
 ## Why generate a static lib?
 
-XCode makes it really hard to add all files from a folder and stay in sync. Without a static lib you need to manually copy into the project all the generated files after every compile. IOW, it's just for convinience.
+XCode makes it really hard to add all files from a folder and stay in sync. Without a static lib you need to manually copy into the project all the generated files after every compile. IOW, it's just for convenience.
 
 ## XCode Setup
 

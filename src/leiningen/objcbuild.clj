@@ -12,6 +12,10 @@
         files (filter #(.isFile %) children)]
     (concat files (mapcat walk subdirs))))
 
+(defn walkr [folder ext]
+  (doall (filter #(.endsWith (.getName %) ext)
+                 (file-seq (file folder)))))
+
 (defn find-files [folder extension]
   (filter #(.endsWith (.getName %) (str "." extension)) (walk (file folder))))
 
@@ -22,6 +26,12 @@
         (doseq [child (.listFiles f)]
           (delete-file-recursively child silently)))
       (delete-file f silently)))
+
+(defn files-map [folder ext]
+  (reduce conj {}
+          (for [f (walkr folder ext)]
+            [(.getCanonicalPath f)
+             (.lastModified f)])))
 
 (defn arch->sdk [arch]
   (if (#{:i386 :x86_64} arch) :iphonesimulator-sdk :iphoneos-sdk))
@@ -50,7 +60,19 @@
       (println cmd)
       (println r))))
 
-(defn build [project sdk archs]
+(defn find-changes [gen old-map-file type]
+  (let [old-map-file (file (str old-map-file "." type "map"))
+        curr-map (files-map gen (str "." type))
+        old-map (if (.exists old-map-file)
+                  (read-string (slurp old-map-file))
+                  {})
+        changes (filter (fn [[file t]]
+                          (let [o (get old-map file)]
+                            (or (nil? o) (not (= o t))))) curr-map)]
+    (spit old-map-file (pr-str curr-map))
+    (map (comp file first) changes)))
+
+(defn build [project sdk archs changes]
   (let [target (:target-path project)
         conf (:objcbuild project)
         objcdir (str target "/" (:objc-path conf))
@@ -58,8 +80,6 @@
     (println "Compiling" sdk "for archs:" archs "...")
     (let [ds (str target "/" (name sdk))
           d (file ds)]
-      (when (.exists d)
-        (delete-file-recursively d))
       (.mkdirs d)
       (with-sh-dir d
         (doall
@@ -74,7 +94,7 @@
                       (str "-I" (:j2objc conf) "/include") (str "-I" objcdir)
                       (map  #(str "-I" %) (:includes conf)) "-c" (.getCanonicalPath m) "-o"
                       (str ds "/" (makeoname objcdir (.getCanonicalPath m)))))
-               (find-files objcdir "m"))))
+               changes)))
       (let [filelist (str ds "/" (name sdk) ".LinkFileList")
             libpath (str ds "/" (:libname conf))]
         (spit filelist (reduce str (interpose "\n" (find-files d "o"))))
@@ -98,28 +118,37 @@
           (leiningen.core.main/exit))
         
         (let [objcdir (file (str target "/" (:objc-path conf)))]
-          (when (.exists objcdir)
+          #_(when (.exists objcdir)
             (delete-file-recursively objcdir))
           (.mkdirs objcdir)
           (doseq [p (:objc-source-paths project)]
             (fsh "cp" "-R" (str p "/.") (.getCanonicalPath objcdir)))
-          (fsh "zip" "-r" (str target "/objc.jar") (str target "/gen") (:java-source-paths project))
+
           
-          (fsh (str (:j2objc conf) "/j2objc") "-d" (str target "/" (:objc-path conf))
-               "-classpath" (reduce str (interpose ":" (classpath/get-classpath project))) (str target "/objc.jar"))
+          (let [changes (find-changes (str target "/gen") (str target "/files") "java")
+                changes (if-let [java-files (flatten (map walkr (:java-source-paths project)))]
+                          (into changes java-files)
+                          changes)
+                changes (map #(.getCanonicalPath %) changes)]
+            (when-not (empty? changes)
+              (fsh "zip" (str target "/objc.jar") changes)
+              (fsh (str (:j2objc conf) "/j2objc") "-d" (str target "/" (:objc-path conf))
+                   "-classpath" (reduce str (interpose ":" (classpath/get-classpath project))) (str target "/objc.jar"))
+              (.delete (file (str target "/objc.jar")))))
 
           (let [headers (file (str target "/" (:headers-path conf)))]
             (when-not (.exists headers)
               (.mkdirs headers))
             (with-sh-dir objcdir
-              (fsh "rsync" "-avm" "--delete" "--include" "*.h" "--exclude" "*.m" "." (.getCanonicalPath headers)))))
+              (fsh "rsync" "-avm" "--delete" "--include" "*.h" "--exclude" "*.m" "." (.getCanonicalPath headers))))
 
-        (let [libs (for [[sdk archs] (group-by arch->sdk (:archs conf))]
-                     (build project sdk archs))
-              libfile (file (str target "/" (:libname conf)))]
-          (when (.exists libfile)
-            (delete-file libfile))
-          (when-not (empty? libs)
-            (fsh "lipo" "-create" "-output" (.getCanonicalPath libfile) libs)))))))
+          (let [changes (find-changes objcdir (str target "/objc") "m")
+                libs (for [[sdk archs] (group-by arch->sdk (:archs conf))]
+                       (build project sdk archs changes))
+                libfile (file (str target "/" (:libname conf)))]
+            (when (.exists libfile)
+              (delete-file libfile))
+            (when-not (empty? libs)
+              (fsh "lipo" "-create" "-output" (.getCanonicalPath libfile) libs))))))))
 
 

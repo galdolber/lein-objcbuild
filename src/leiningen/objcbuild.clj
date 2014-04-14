@@ -30,17 +30,17 @@
               ;:clojure-objc "path/to/clojure-objc/dist"
               :objc-path "objc"
               :headers-path "include"
-              :iphoneos-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk"
-              :iphonesimulator-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator7.0.sdk"
+              :iphoneos-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.1.sdk"
+              :iphonesimulator-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator7.1.sdk"
               :frameworks [:UIKit :Foundation]
               :includes []
               :iphone-version-min 5.0
               :archs [:armv7 :armv7s :arm64 :i386 :x86_64]
               :clang-params "-fmessage-length=0 -fmacro-backtrace-limit=0 -std=gnu99 -fpascal-strings -fstrict-aliasing"
-              :clang-extra "-O0 -DDEBUG=1"})
+              :clang-extra "-O0 -g -DDEBUG=1"})
 
 (defn makeoname [objc f]
-  (str (st/replace (subs (subs f 0 (dec (count f))) (inc (count objc))) #"/" "_") "o"))
+  (str (st/replace (subs (subs f 0 (dec (count f))) (inc (count objc))) #"/" ".") "o"))
 
 (defn fsh [& o]
   (let [cmd (filter identity (flatten o))
@@ -90,6 +90,13 @@
       (println "Missing paths to j2objc dist or clojure-objc dist in your project.clj. :objcbuildn "
                "{:j2objc \"/path/to/j2objc/dist\" :clojure-objc \"/path/to/clojure-objc/dist\"...")
       (do
+        (when-not (.exists (file (:iphoneos-sdk conf)))
+          (println "SDK not found:" (:iphoneos-sdk conf) ". Set it with :iphoneos-sdk")
+          (leiningen.core.main/exit))
+        (when-not (.exists (file (:iphonesimulator-sdk conf)))
+          (println "SDK not found:" (:iphonesimulator-sdk conf) ". Set it with :iphonesimulator-sdk")
+          (leiningen.core.main/exit))
+        
         (let [objcdir (file (str target "/" (:objc-path conf)))]
           (when (.exists objcdir)
             (delete-file-recursively objcdir))

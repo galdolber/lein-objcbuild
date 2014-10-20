@@ -1,10 +1,29 @@
 (ns leiningen.objcbuild
-  (:import [java.io File])
+  (:import [java.io File]
+           [clojure.lang ExceptionInfo])
   (:require [leiningen.core.classpath :as classpath]
-            [clojure.string :as st])
+            [clojure.string :as st]
+            [clojure.java.io :as io]
+            [leiningen.core.main :as main])
   (:use [clojure.java.shell :only [sh with-sh-dir]]
         [clojure.java.io :only [delete-file file]]
         [clojure.pprint :only [pprint]]))
+
+(def ansi-codes
+  {:reset   "\u001b[0m"
+   :black   "\u001b[30m" :gray           "\u001b[1m\u001b[30m"
+   :red     "\u001b[31m" :bright-red     "\u001b[1m\u001b[31m"
+   :green   "\u001b[32m" :bright-green   "\u001b[1m\u001b[32m"
+   :yellow  "\u001b[33m" :bright-yellow  "\u001b[1m\u001b[33m"
+   :blue    "\u001b[34m" :bright-blue    "\u001b[1m\u001b[34m"
+   :magenta "\u001b[35m" :bright-magenta "\u001b[1m\u001b[35m"
+   :cyan    "\u001b[36m" :bright-cyan    "\u001b[1m\u001b[36m"
+   :white   "\u001b[37m" :bright-white   "\u001b[1m\u001b[37m"
+   :default "\u001b[39m"})
+
+(defn log [& strs]
+  (let [text (st/join " " strs)]    
+    (println (str (ansi-codes :bright-white) text (ansi-codes :reset)))))
 
 (defn walk [^File dir]
   (let [children (.listFiles dir)
@@ -56,9 +75,9 @@
   (let [cmd (filter identity (flatten o))
         r (apply sh cmd)]
     (when-not (zero? (:exit r))
-      (println )
-      (println cmd)
-      (println r))))
+      (log)
+      (log (vec cmd))
+      (log r))))
 
 (defn find-changes [gen old-map-file type]
   (let [old-map-file (file (str old-map-file "." type "map"))
@@ -77,7 +96,7 @@
         conf (:objcbuild project)
         objcdir (str target "/" (:objc-path conf))
         print-agent (agent nil)]
-    (println "Compiling" sdk "for archs:" archs "...")
+    (log "Compiling" sdk "for archs:" archs "...")
     (let [ds (str target "/" (name sdk))
           d (file ds)]
       (.mkdirs d)
@@ -86,7 +105,7 @@
          (pmap (fn [m]
                  (send print-agent
                        (fn [_]
-                         (println "clang" (.getName m))))
+                         (log "clang" (.getName m))))
                  (fsh "clang" "-x" "objective-c" (map #(vector "-arch" (name %)) archs)
                       (st/split (:clang-params conf) #" ") (st/split (:clang-extra conf) #" ")
                       (str "-miphoneos-version-min=" (:iphone-version-min conf))
@@ -102,53 +121,114 @@
              (map #(vector "-framework" (name %)) (:frameworks conf)) "-o" libpath)
         libpath))))
 
+; https://github.com/weavejester/lein-auto
+
+(defn project-files [project]
+  (file-seq (io/file (:root project))))
+
+(defn modified-since [^File file timestamp]
+  (> (.lastModified file) timestamp))
+
+(defn modified-files [project timestamp]
+  (->> (project-files project)
+       (remove #(.isDirectory ^File %))
+       (filter #(modified-since % timestamp))))
+
+(defn grep [re coll]
+  (filter #(re-find re (str %)) coll))
+
+(defn run-task [project task]
+  (binding [main/*exit-process?* false]
+    (main/resolve-and-apply project (list task))))
+
+(defn add-ending-separator [^String path]
+  (if (.endsWith path File/separator)
+    path
+    (str path File/separator)))
+
+(defn remove-prefix [^String s ^String prefix]
+  (if (.startsWith s prefix)
+    (subs s (.length prefix))
+    s))
+
+(defn show-modified [project files]
+  (let [root  (add-ending-separator (:root project))
+        paths (map #(remove-prefix (str %) root) files)]
+    (st/join ", " paths)))
+
+(def default-config
+  {:file-pattern #"\.(clj|cljs|cljx)$"
+   :wait-time    50})
+
+(defn objcbuild-auto [project]
+  (let [config (merge default-config
+                      (get-in project [:auto :default])
+                      (get-in project [:auto :objcbuild]))]
+    (loop [time 0]
+      (Thread/sleep (:wait-time config))
+      (if-let [files (->> (modified-files project time)
+                          (grep (:file-pattern config))
+                          (seq))]
+        (do (log "Recompiling...")
+            (try
+              (let [t (System/currentTimeMillis)]              
+                (run-task project "objcbuild")
+                (log (str "Completed in " (- (System/currentTimeMillis) t) "ms")))
+              (catch ExceptionInfo _
+                (log "Failed.")))
+            (recur (System/currentTimeMillis)))
+        (recur time)))))
+
 (defn objcbuild [project & args]
-  (let [conf (merge default (:objcbuild project) {:libname (str "lib" (:group project) ".a")})
-        project (assoc project :objcbuild conf)
-        target (:target-path project)]
-    (if (some nil? [(:clojure-objc conf) (:j2objc conf)])
-      (println "Missing paths to j2objc dist or clojure-objc dist in your project.clj. :objcbuildn "
-               "{:j2objc \"/path/to/j2objc/dist\" :clojure-objc \"/path/to/clojure-objc/dist\"...")
-      (do
-        (when-not (.exists (file (:iphoneos-sdk conf)))
-          (println "SDK not found:" (:iphoneos-sdk conf) ". Set it with :iphoneos-sdk")
-          (leiningen.core.main/exit))
-        (when-not (.exists (file (:iphonesimulator-sdk conf)))
-          (println "SDK not found:" (:iphonesimulator-sdk conf) ". Set it with :iphonesimulator-sdk")
-          (leiningen.core.main/exit))
-        
-        (let [objcdir (file (str target "/" (:objc-path conf)))]
-          #_(when (.exists objcdir)
-            (delete-file-recursively objcdir))
-          (.mkdirs objcdir)
-          (doseq [p (:objc-source-paths project)]
-            (fsh "cp" "-R" (str p "/.") (.getCanonicalPath objcdir)))
-
+  (if (= "auto" (first args))
+    (objcbuild-auto project)
+    (let [conf (merge default (:objcbuild project) {:libname (str "lib" (:group project) ".a")})
+          project (assoc project :objcbuild conf)
+          target (:target-path project)]
+      (run-task project "compile")
+      (if (some nil? [(:clojure-objc conf) (:j2objc conf)])
+        (log "Missing paths to j2objc dist or clojure-objc dist in your project.clj. :objcbuildn "
+             "{:j2objc \"/path/to/j2objc/dist\" :clojure-objc \"/path/to/clojure-objc/dist\"...")
+        (do
+          (when-not (.exists (file (:iphoneos-sdk conf)))
+            (log "SDK not found:" (:iphoneos-sdk conf) ". Set it with :iphoneos-sdk")
+            (leiningen.core.main/exit))
+          (when-not (.exists (file (:iphonesimulator-sdk conf)))
+            (log "SDK not found:" (:iphonesimulator-sdk conf) ". Set it with :iphonesimulator-sdk")
+            (leiningen.core.main/exit))
           
-          (let [changes (find-changes (str target "/gen") (str target "/files") "java")
-                changes (if-let [java-files (flatten (map walkr (:java-source-paths project)))]
-                          (into changes java-files)
-                          changes)
-                changes (map #(.getCanonicalPath %) changes)]
-            (when-not (empty? changes)
-              (fsh "zip" (str target "/objc.jar") changes)
-              (fsh (str (:j2objc conf) "/j2objc") "-d" (str target "/" (:objc-path conf))
-                   "-classpath" (reduce str (interpose ":" (classpath/get-classpath project))) (str target "/objc.jar"))
-              (.delete (file (str target "/objc.jar")))))
+          (let [objcdir (file (str target "/" (:objc-path conf)))]
+            #_(when (.exists objcdir)
+                (delete-file-recursively objcdir))
+            (.mkdirs objcdir)
+            (doseq [p (:objc-source-paths project)]
+              (fsh "cp" "-R" (str p "/.") (.getCanonicalPath objcdir)))
 
-          (let [headers (file (str target "/" (:headers-path conf)))]
-            (when-not (.exists headers)
-              (.mkdirs headers))
-            (with-sh-dir objcdir
-              (fsh "rsync" "-avm" "--delete" "--include" "*.h" "--exclude" "*.m" "." (.getCanonicalPath headers))))
+            
+            (let [changes (find-changes (str target "/gen") (str target "/files") "java")
+                  changes (if-let [java-files (flatten (map walkr (:java-source-paths project)))]
+                            (into changes java-files)
+                            changes)
+                  changes (map #(.getCanonicalPath %) changes)]
+              (when-not (empty? changes)
+                (fsh "zip" (str target "/objc.jar") changes)
+                (fsh (str (:j2objc conf) "/j2objc") "-d" (str target "/" (:objc-path conf))
+                     "-classpath" (reduce str (interpose ":" (classpath/get-classpath project))) (str target "/objc.jar"))
+                (.delete (file (str target "/objc.jar")))))
 
-          (let [changes (find-changes objcdir (str target "/objc") "m")
-                libs (for [[sdk archs] (group-by arch->sdk (:archs conf))]
-                       (build project sdk archs changes))
-                libfile (file (str target "/" (:libname conf)))]
-            (when (.exists libfile)
-              (delete-file libfile))
-            (when-not (empty? libs)
-              (fsh "lipo" "-create" "-output" (.getCanonicalPath libfile) libs))))))))
+            (let [headers (file (str target "/" (:headers-path conf)))]
+              (when-not (.exists headers)
+                (.mkdirs headers))
+              (with-sh-dir objcdir
+                (fsh "rsync" "-avm" "--delete" "--include" "*.h" "--exclude" "*.m" "." (.getCanonicalPath headers))))
+
+            (let [changes (find-changes objcdir (str target "/objc") "m")
+                  libs (for [[sdk archs] (group-by arch->sdk (:archs conf))]
+                         (build project sdk archs changes))
+                  libfile (file (str target "/" (:libname conf)))]
+              (when (.exists libfile)
+                (delete-file libfile))
+              (when-not (empty? libs)
+                (fsh "lipo" "-create" "-output" (.getCanonicalPath libfile) libs)))))))))
 
 

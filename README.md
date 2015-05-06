@@ -16,9 +16,9 @@ Add to your project.clj:
     `:aot :all`
     `:objcbuild {:j2objc "path/to/j2objc" :clojure-objc "path/to/clojure-objc"}`
 
-Add `[galdolber/clojure-objc "1.5.1-1"]` to your `:dependencies` of your project.clj.
+Add `[galdolber/clojure-objc "1.7.0-beta2"]` to your `:dependencies` of your project.clj.
 
-Put `[lein-objcbuild "0.1.3"]` into the `:plugins` vector of your project.clj.
+Put `[lein-objcbuild "0.1.5"]` into the `:plugins` vector of your project.clj.
 
     $ lein compile # clojure-objc generates all the required sources
     $ lein objcbuild # translates the sources into objc, copies all headers and builds a fat static library
@@ -50,24 +50,16 @@ Every clojure-objc project generates an include folder with all headers and a st
         [[ClojureLangRT varWithNSString:@"clojure-objc-sample.core" withNSString:@"say-hi"] invokeWithId:@"Xcode"]; // call function
         ...
 
-## Development cycle
+## Compiling
 
-    * Make changes
-    * lein compile; lein objcbuild
-    * Run XCode project
-
-## Future work
-
-    * Incremental compiles
+    * lein objcbuild auto
 
 ## Build options
 
     (defproject ...
         :objc-source-paths ["path/to/objc/sources"]
         :objcbuild 
-        {:j2objc "/path/to/j2objc/dist"
-         :clojure-objc "path/to/clojure-objc/dist"
-         :objc-path "objc"
+	{:objc-path "objc"
          :headers-path "include"
          :iphoneos-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk"
          :iphonesimulator-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhone Simulator7.0.sdk"

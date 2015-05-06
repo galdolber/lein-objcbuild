@@ -8,15 +8,9 @@ https://github.com/galdolber/clojure-objc-sample
 
 ## Usage
 
-Download j2objc and the last clojure-objc dist from: https://github.com/galdolber/clojure-objc
-
-Add j2objc to your PATH
-
-Add to your project.clj:
-    `:aot :all`
-    `:objcbuild {:j2objc "path/to/j2objc" :clojure-objc "path/to/clojure-objc"}`
-
 Add `[galdolber/clojure-objc "1.7.0-beta2"]` to your `:dependencies` of your project.clj.
+
+Add `:aot :all`
 
 Add [![Clojars Project](http://clojars.org/lein-objcbuild/latest-version.svg)](http://clojars.org/lein-objcbuild) into the `:plugins` vector of your project.clj.
 
@@ -28,7 +22,7 @@ XCode makes it really hard to add all files from a folder and stay in sync. With
 
 ## XCode Setup
 
-Every clojure-objc project generates an include folder with all headers and a static library lib{project name}.a in the target folder.
+Every clojure-objc project generates an 'include' folder with all headers and a static library lib{project name}.a in the target folder.
 
     Build Settings-> Other Linker Flags-> Add "-ObjC -lz -ljre_emul -lclojure-objc -l{project name}"
     Build Settings-> Header Search Path-> Add "~/.clojure-objc/{version}/include" "path/to/your/project/target/include"

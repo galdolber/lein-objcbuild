@@ -18,10 +18,9 @@ Add to your project.clj:
 
 Add `[galdolber/clojure-objc "1.7.0-beta2"]` to your `:dependencies` of your project.clj.
 
-Put `[lein-objcbuild "0.1.5"]` into the `:plugins` vector of your project.clj.
+Add  ![Clojars Project](http://clojars.org/lein-objcbuild/latest-version.svg)  into the `:plugins` vector of your project.clj.
 
-    $ lein compile # clojure-objc generates all the required sources
-    $ lein objcbuild # translates the sources into objc, copies all headers and builds a fat static library
+    $ lein objcbuild auto
 
 ## Why generate a static lib?
 
@@ -32,8 +31,8 @@ XCode makes it really hard to add all files from a folder and stay in sync. With
 Every clojure-objc project generates an include folder with all headers and a static library lib{project name}.a in the target folder.
 
     Build Settings-> Other Linker Flags-> Add "-ObjC -lz -ljre_emul -lclojure-objc -l{project name}"
-    Build Settings-> Header Search Path-> Add "path/to/j2objc/include" "path/to/clojure-objc/include" "path/to/your/project/target/include"
-    Build Settings-> Library Search Path->  Add "path/to/j2objc/lib" "path/to/clojure-objc/" "path/to/your/project/target/"
+    Build Settings-> Header Search Path-> Add "~/.clojure-objc/{version}/include" "path/to/your/project/target/include"
+    Build Settings-> Library Search Path->  Add "~/.clojure-objc/{version}/" "path/to/your/project/target/"
     
 ## Calling clojure functions
 
@@ -50,19 +49,24 @@ Every clojure-objc project generates an include folder with all headers and a st
         [[ClojureLangRT varWithNSString:@"clojure-objc-sample.core" withNSString:@"say-hi"] invokeWithId:@"Xcode"]; // call function
         ...
 
-## Compiling
+## Minimal project sample
 
-    * lein objcbuild auto
+	(defproject sample "0.1.0-SNAPSHOT"
+	  :plugins [[lein-objcbuild "0.1.5"]]
+	  :objcbuild {:archs [:i386 :armv7 :armv7s]}
+	  :aot :all
+	  :dependencies
+	  [[galdolber/clojure-objc "1.7.0-beta2"]])
 
-## Build options
+## All build options
 
     (defproject ...
         :objc-source-paths ["path/to/objc/sources"]
         :objcbuild 
 	{:objc-path "objc"
          :headers-path "include"
-         :iphoneos-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk"
-         :iphonesimulator-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhone Simulator7.0.sdk"
+         :iphoneos-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk"
+         :iphonesimulator-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhone Simulator.sdk"
          :frameworks [:UIKit :Foundation]
          :includes []
          :iphone-version-min 5.0

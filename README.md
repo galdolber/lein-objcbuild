@@ -8,7 +8,7 @@ https://github.com/galdolber/clojure-objc-sample
 
 ## Usage
 
-Add `[galdolber/clojure-objc "1.7.0-beta2"]` to your `:dependencies` of your project.clj.
+Add [![Clojars Project](http://clojars.org/galdolber/clojure-objc/latest-version.svg)](http://clojars.org/galdolber/clojure-objc) to your `:dependencies` of your project.clj.
 
 Add `:aot :all`
 

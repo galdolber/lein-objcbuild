@@ -18,7 +18,7 @@ Add to your project.clj:
 
 Add `[galdolber/clojure-objc "1.7.0-beta2"]` to your `:dependencies` of your project.clj.
 
-Add  ![Clojars Project](http://clojars.org/lein-objcbuild/latest-version.svg)  into the `:plugins` vector of your project.clj.
+Add [![Clojars Project](http://clojars.org/lein-objcbuild/latest-version.svg)](http://clojars.org/lein-objcbuild) into the `:plugins` vector of your project.clj.
 
     $ lein objcbuild auto
 

@@ -24,7 +24,7 @@ XCode makes it really hard to add all files from a folder and stay in sync. With
 
 Every clojure-objc project generates an 'include' folder with all headers and a static library lib{project name}.a in the target folder.
 
-    Build Settings-> Other Linker Flags-> Add "-ObjC -lz -ljre_emul -lclojure-objc -l{project name}"
+    Build Settings-> Other Linker Flags-> Add "-ObjC -lz -licucore -ljre_emul -lclojure-objc -l{project name}"
     Build Settings-> Header Search Path-> Add "~/.clojure-objc/{version}/include" "path/to/your/project/target/include"
     Build Settings-> Library Search Path->  Add "~/.clojure-objc/{version}/" "path/to/your/project/target/"
     

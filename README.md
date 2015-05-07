@@ -30,7 +30,7 @@ Every clojure-objc project generates an 'include' folder with all headers and a 
     Build Settings-> Header Search Path-> Add "~/.clojure-objc/{version}/include" "path/to/your/project/target/include"
     Build Settings-> Library Search Path->  Add "~/.clojure-objc/{version}/" "path/to/your/project/target/"
     
-## Calling clojure functions
+## Invoking your entry point
 
     #import "clojure/lang/RT.h"
     #import "clojure/lang/Var.h"

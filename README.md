@@ -8,6 +8,8 @@ https://github.com/galdolber/clojure-objc-sample
 
 ## Usage
 
+![alt usage guide](https://github.com/galdolber/clojure-objc-sample/raw/master/ios.gif)
+
 Add [![Clojars Project](http://clojars.org/galdolber/clojure-objc/latest-version.svg)](http://clojars.org/galdolber/clojure-objc) to your `:dependencies` of your project.clj.
 
 Add `:aot :all`

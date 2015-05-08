@@ -26,10 +26,10 @@ XCode makes it really hard to add all files from a folder and stay in sync. With
 
 Every clojure-objc project generates an 'include' folder with all headers and a static library lib{project name}.a in the target folder.
 
-    Build Settings-> Other Linker Flags-> Add "-ObjC -lz -licucore -ljre_emul -lclojure-objc -l{project name}"
+    Build Settings-> Other Linker Flags-> Add "-ObjC -lz -licucore -ljre_emul -lffi -lclojure-objc -l{project name}"
     Build Settings-> Header Search Path-> Add "~/.clojure-objc/{version}/include" "path/to/your/project/target/include"
     Build Settings-> Library Search Path->  Add "~/.clojure-objc/{version}/" "path/to/your/project/target/"
-    
+
 ## Invoking your entry point
 
     #import "clojure/lang/RT.h"
@@ -40,7 +40,7 @@ Every clojure-objc project generates an 'include' folder with all headers and a 
     {
         [ClojureLangObjC setObjC]; // required!
         [ClojureLangRT load__WithNSString:@"clojure/core"]; // load clojure core
-        
+
         [ClojureLangRT load__WithNSString:@"clojure_objc_sample/core"]; // loads your entry point
         [[ClojureLangRT varWithNSString:@"clojure-objc-sample.core" withNSString:@"say-hi"] invokeWithId:@"Xcode"]; // call function
         ...
@@ -58,7 +58,7 @@ Every clojure-objc project generates an 'include' folder with all headers and a 
 
     (defproject ...
         :objc-source-paths ["path/to/objc/sources"]
-        :objcbuild 
+        :objcbuild
 	{:objc-path "objc"
          :headers-path "include"
          :iphoneos-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk"

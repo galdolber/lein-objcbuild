@@ -18,6 +18,10 @@ Add [![Clojars Project](http://clojars.org/lein-objcbuild/latest-version.svg)](h
 
     $ lein objcbuild auto
 
+## Building standalone apps
+
+Sample desktop app: [![CljObj] (https://github.com/galdolber/cljobjc)](https://github.com/galdolber/cljobjc)
+
 ## Why generate a static lib?
 
 XCode makes it really hard to add all files from a folder and stay in sync. Without a static lib you need to manually copy into the project all the generated files after every compile. IOW, it's just for convenience.
@@ -60,6 +64,7 @@ Every clojure-objc project generates an 'include' folder with all headers and a 
         :objc-source-paths ["path/to/objc/sources"]
         :objcbuild
 	{:objc-path "objc"
+	 :main nil ; main function required when building standalone apps
          :headers-path "include"
          :iphoneos-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk"
          :iphonesimulator-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhone Simulator.sdk"

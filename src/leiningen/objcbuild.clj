@@ -59,6 +59,7 @@
 (def default {;:j2objc "/path/to/j2objc/dist"
               ;:clojure-objc "path/to/clojure-objc/dist"
               :objc-path "objc"
+              :main nil
               :headers-path "include"
               :iphoneos-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk"
               :iphonesimulator-sdk "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk"
@@ -96,6 +97,7 @@
 
 (defn build [project sdk archs changes]
   (let [target (:target-path project)
+        sdk (or sdk :all)
         conf (:objcbuild project)
         objcdir (str target "/" (:objc-path conf))
         print-agent (agent nil)]
@@ -109,10 +111,12 @@
                  (send print-agent
                        (fn [_]
                          (log "clang" (.getName m))))
-                 (fsh "clang" "-x" "objective-c" (map #(vector "-arch" (name %)) archs)
+                 (fsh "clang" "-x" "objective-c"
+                      (map #(vector "-arch" (name %)) archs)
                       (st/split (:clang-params conf) #" ") (st/split (:clang-extra conf) #" ")
-                      (str "-miphoneos-version-min=" (:iphone-version-min conf))
-                      "-isysroot" (conf sdk) (str "-I" (:clojure-objc conf) "/include")
+                      (when-not (= :all sdk)
+                        [(str "-miphoneos-version-min=" (:iphone-version-min conf)) "-isysroot" (conf sdk)])
+                      (str "-I" (:clojure-objc conf) "/include")
                       (str "-I" (:j2objc conf) "/include") (str "-I" objcdir)
                       (map  #(str "-I" %) (:includes conf)) "-c" (.getCanonicalPath m) "-o"
                       (str ds "/" (makeoname objcdir (.getCanonicalPath m)))))
@@ -120,7 +124,9 @@
       (let [filelist (str ds "/" (name sdk) ".LinkFileList")
             libpath (str ds "/" (:libname conf))]
         (spit filelist (reduce str (interpose "\n" (find-files d "o"))))
-        (fsh "libtool" "-static" "-syslibroot" (conf sdk) "-filelist" filelist
+        (fsh "libtool" "-static" (when-not (= :all sdk)
+                                   ["-syslibroot" (conf sdk)])
+             "-filelist" filelist
              (map #(vector "-framework" (name %)) (:frameworks conf)) "-o" libpath)
         libpath))))
 
@@ -205,6 +211,34 @@
           (.exec (Runtime/getRuntime) (str "chmod 755 " file separator "j2objc"))
           file)))))
 
+(defn create-main [main]
+  (let [ns (-> (namespace main)
+               (clojure.string/replace #"\." "/")
+               (clojure.string/replace #"-" "_"))
+        f (clojure.string/replace (name main) #"-" "_")
+        upperns (-> (namespace main)
+                    (clojure.string/replace #"\." "")
+                    clojure.string/capitalize)]
+    (str "
+#import <Foundation/Foundation.h>
+#import \"clojure/lang/RT.h\"
+#import \"clojure/lang/ObjC.h\"
+#import \"clojure/lang/Var.h\"
+#import \"clojure/lang/PersistentVector.h\"
+#import \"clojure/lang/AFn.h\"
+#import \"" ns "_" f ".h\"
+
+int main(int argc, char * argv[]) {
+  [ClojureLangObjC setObjC];
+  [ClojureLangRT load__WithNSString:@\"clojure/core\"];
+  [ClojureLangRT load__WithNSString:@\"" ns "\"];
+  id args = ClojureLangPersistentVector_get_EMPTY_();
+  for (int n = 0; n < argc; n++) {
+    args = [ClojureLangRT conjWithClojureLangIPersistentCollection:args withId:[NSString stringWithUTF8String:argv[n]]];
+  }
+  [" upperns "_" f "_get_VAR_() invokeWithId: args];
+}")))
+
 (defn objcbuild [project & args]
   (let [project (assoc-in project [:objcbuild :clojure-objc]
                           (check-lib project))]
@@ -215,12 +249,13 @@
             project (assoc project :objcbuild conf)
             target (:target-path project)]
         (run-task project "compile")
-        (when-not (.exists (file (:iphoneos-sdk conf)))
-          (log "SDK not found:" (:iphoneos-sdk conf) ". Set it with :iphoneos-sdk")
-          (leiningen.core.main/exit))
-        (when-not (.exists (file (:iphonesimulator-sdk conf)))
-          (log "SDK not found:" (:iphonesimulator-sdk conf) ". Set it with :iphonesimulator-sdk")
-          (leiningen.core.main/exit))
+        (when-not (:main conf)
+          (when-not (.exists (file (:iphoneos-sdk conf)))
+            (log "SDK not found:" (:iphoneos-sdk conf) ". Set it with :iphoneos-sdk")
+            (leiningen.core.main/exit))
+          (when-not (.exists (file (:iphonesimulator-sdk conf)))
+            (log "SDK not found:" (:iphonesimulator-sdk conf) ". Set it with :iphonesimulator-sdk")
+            (leiningen.core.main/exit)))
         
         (let [objcdir (file (str target "/" (:objc-path conf)))]
           (.mkdirs objcdir)
@@ -244,12 +279,28 @@
               (.mkdirs headers))
             (with-sh-dir objcdir
               (fsh "rsync" "-avm" "--delete" "--include" "*.h" "--exclude" "*.m" "." (.getCanonicalPath headers))))
-
-          (let [changes (find-changes objcdir (str target "/objc") "m")
-                libs (for [[sdk archs] (group-by arch->sdk (:archs conf))]
-                       (build project sdk archs changes))
-                libfile (file (str target "/" (:libname conf)))]
-            (when (.exists libfile)
-              (delete-file libfile))
-            (when-not (empty? libs)
-              (fsh "lipo" "-create" "-output" (.getCanonicalPath libfile) libs))))))))
+          (let [changes (find-changes objcdir (str target "/objc") "m")]
+            (if-let [m (:main conf)]
+              (let [lib (build project nil (:archs conf) changes)]
+                (spit (str target "/main.m") (create-main m))
+                (println "Building executable")
+                (fsh "clang"
+                     (map #(vector "-framework" (name %)) (:frameworks conf))
+                     ;(map #(vector "-arch" (name %)) (:archs conf))
+                     (st/split (:clang-params conf) #" ") (st/split (:clang-extra conf) #" ")
+                     (str "-I" (:clojure-objc conf) "/include")
+                     (str "-I" target "/include")
+                     (map #(str "-I" %) (:includes conf))
+                     "-g" "target/main.m"
+                     lib
+                     (str (:clojure-objc conf) "/libclojure-objc.a")
+                     (str (:clojure-objc conf) "/libjre_emul.a")
+                     "-ObjC" "-lobjc" "-lz" "-licucore" "-lffi"
+                     "-o" (str "target/" (:name project))))
+              (let [libs (for [[sdk archs] (group-by arch->sdk (:archs conf))]
+                           (build project sdk archs changes))
+                    libfile (file (str target "/" (:libname conf)))]
+                (when (.exists libfile)
+                  (delete-file libfile))
+                (when-not (empty? libs)
+                  (fsh "lipo" "-create" "-output" (.getCanonicalPath libfile) libs))))))))))

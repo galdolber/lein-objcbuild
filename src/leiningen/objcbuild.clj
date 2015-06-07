@@ -95,6 +95,9 @@
     (spit old-map-file (pr-str curr-map))
     (map (comp file first) changes)))
 
+(defn linux? []
+  (= (.toLowerCase (System/getProperty "os.name")) "linux"))
+
 (defn build [project sdk archs changes]
   (let [target (:target-path project)
         sdk (or sdk :all)
@@ -125,8 +128,11 @@
       (let [filelist (str ds "/" (name sdk) ".LinkFileList")
             libpath (str ds "/" (:libname conf))]
         (spit filelist (reduce str (interpose "\n" (find-files d "o"))))
-        (fsh "libtool" "-static" (when-not (= :all sdk)
-                                   ["-syslibroot" (conf sdk)])
+        (fsh "libtool"
+             (when (linux?) "--mode=link")
+             (when (linux?) "cc")
+             "-static" (when-not (= :all sdk)
+                         ["-syslibroot" (conf sdk)])
              "-filelist" filelist
              (map #(vector "-framework" (name %)) (:frameworks conf)) "-o" libpath)
         libpath))))

@@ -101,7 +101,7 @@
         conf (:objcbuild project)
         objcdir (str target "/" (:objc-path conf))
         print-agent (agent nil)]
-    (log "Compiling" sdk "for archs:" archs "...")
+    (log "Compiling" sdk (if archs (str "for archs:" archs) "") "...")
     (let [ds (str target "/" (name sdk))
           d (file ds)]
       (.mkdirs d)
@@ -112,7 +112,8 @@
                        (fn [_]
                          (log "clang" (.getName m))))
                  (fsh "clang" "-x" "objective-c"
-                      (map #(vector "-arch" (name %)) archs)
+                      (when-not (= :all sdk)
+                        (map #(vector "-arch" (name %)) archs))
                       (st/split (:clang-params conf) #" ") (st/split (:clang-extra conf) #" ")
                       (when-not (= :all sdk)
                         [(str "-miphoneos-version-min=" (:iphone-version-min conf)) "-isysroot" (conf sdk)])
@@ -244,7 +245,12 @@ int main(int argc, char * argv[]) {
                           (check-lib project))]
     (if (= "auto" (first args))
       (objcbuild-auto project)
-      (let [conf (merge default (:objcbuild project) {:libname (str "lib" (:group project) ".a")})
+      (let [conf (:objcbuild project)
+            default (if (:main conf)
+                      (assoc (dissoc default :archs)
+                             :frameworks [:Security :Foundation])
+                      default)
+            conf (merge default conf {:libname (str "lib" (:group project) ".a")})
             conf (if (:j2objc conf) conf (assoc conf :j2objc (:clojure-objc conf)))
             project (assoc project :objcbuild conf)
             target (:target-path project)]
@@ -281,7 +287,7 @@ int main(int argc, char * argv[]) {
               (fsh "rsync" "-avm" "--delete" "--include" "*.h" "--exclude" "*.m" "." (.getCanonicalPath headers))))
           (let [changes (find-changes objcdir (str target "/objc") "m")]
             (if-let [m (:main conf)]
-              (let [lib (build project nil (:archs conf) changes)]
+              (let [lib (build project nil nil changes)]
                 (spit (str target "/main.m") (create-main m))
                 (println "Building executable")
                 (fsh "clang"

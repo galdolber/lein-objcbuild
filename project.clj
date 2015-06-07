@@ -1,4 +1,4 @@
-(defproject lein-objcbuild "0.1.8"
+(defproject lein-objcbuild "0.1.9"
   :description "Clojure-objc build plugin"
   :url "http://github.com/galdolber/lein-objcbuild"
   :license {:name "Eclipse Public License"

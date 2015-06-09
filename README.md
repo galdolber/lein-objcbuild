@@ -20,7 +20,7 @@ Add [![Clojars Project](http://clojars.org/lein-objcbuild/latest-version.svg)](h
 
 ## Building standalone apps
 
-Sample desktop app: [![CljObj] (https://github.com/galdolber/cljobjc)](https://github.com/galdolber/cljobjc)
+Sample desktop app: https://github.com/galdolber/cljobjc
 
 ## Why generate a static lib?
 

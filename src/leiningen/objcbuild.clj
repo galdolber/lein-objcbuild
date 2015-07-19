@@ -119,7 +119,7 @@
                         (map #(vector "-arch" (name %)) archs))
                       (st/split (:clang-params conf) #" ") (st/split (:clang-extra conf) #" ")
                       (when-not (= :all sdk)
-                        [(str "-miphoneos-version-min=" (:iphone-version-min conf)) "-isysroot" (conf sdk)])
+                        [(str "-miphoneos-version-min=" (:iphone-version-min conf)) (str "-isysroot" (conf sdk))])
                       (str "-I" (:clojure-objc conf) "/include")
                       (str "-I" (:j2objc conf) "/include") (str "-I" objcdir)
                       (map  #(str "-I" %) (:includes conf)) "-c" (.getCanonicalPath m) "-o"
